@@ -14,14 +14,22 @@ import java.lang.Object;
 class Player {
     // GLOBAL VARIABLES
     static ArrayList<List<Integer>> spellsSavedList = new ArrayList<List<Integer>> () ;
-    static Boolean spellsAreSaved = false; 
+    static Boolean spellsAreSaved = false;
 
     // UTILS ---------------------------------------
     public static void saveSpells(List<Integer> spell) {
         spellsSavedList.add(spell);
     }
+    public static int findIndexWithId(int id, ArrayList<List<Integer>> list) {
+        int index = -1;
+        for (int i = 0; i < list.size(); i++) {
+            if (list.get(i).get(0) == id) {
+                index = i;
+            }
+        }
 
-
+        return index;
+    }
     // ACTION & COMMAND ---------------------------------------
     public static String actionToMake(ArrayList<List<Integer>> commands, List<Integer> inventoryPlayer, ArrayList<List<Integer>> spellsList) {
         String action;
@@ -36,11 +44,12 @@ class Player {
 
         System.err.println("Inventaire :" + inventoryPlayer);
         if (!inventoryIsGood(commandItems, inventoryPlayer)) {
-            System.err.println("Commande pas possible !");         
+            System.err.println("Commande pas possible !");  
             action = castCommand(commandItems, inventoryPlayer, spellsList);
         } else {
-            action = "BREW " + commandId;
+            action = "BREW " + Integer.toString(commandId); ;
         }
+
         return action;
     }
 
@@ -68,10 +77,14 @@ class Player {
     // CAST ---------------------------------------
     public static String castCommand(List<Integer> command, List<Integer> inventory, ArrayList<List<Integer>> spellsList) {
         List<Integer> itemsToCast = findItemsToCast(command, inventory);
-        int spellToCast = findSpellToCast(itemsToCast, spellsList);
-        String castAction = "BREW " + spellToCast;
-
-        return castAction;
+        int actionId = findSpellToCast(itemsToCast, spellsList, inventory);
+        String action;
+        if (actionId == -1) {
+            action = "REST";
+        } else {
+            action = "CAST " + actionId;
+        }
+        return action; 
     }
 
     public static List<Integer> findItemsToCast(List<Integer> itemsList, List<Integer> inventory) {
@@ -85,24 +98,47 @@ class Player {
         return itemsToCast;
     }
 
-    public static int findSpellToCast(List<Integer> items, ArrayList<List<Integer>> spellsList) {
-        int spellToCast = 0;
-        int itemsInSpell = 0;
-        // for (List<Integer> spell : spellsSavedList) {
-        //     for (int i = 0; i < spell.size(); i++) {
-        //         if (items[i] = spell[i])
-        //     }
-        // }
+    public static int findSpellToCast(List<Integer> itemsList, ArrayList<List<Integer>> spellsList, List<Integer> inventory) {
+        int spellToCastId = 0;
 
-        if (spellIsAvailable(78, spellsList)) {
-            spellToCast = 1;
+        for (int i = 0; i < itemsList.size(); i++) {
+            if (itemsList.get(i) < 0) {
+                spellToCastId = findSpellForItem(i);
+                System.err.println("Sort à caster:" + spellToCastId);
+
+                int spellIndex = findIndexWithId(spellToCastId, spellsList);
+                if (spellIndex == -1) {
+                    return -1;
+                } else {
+
+                    // On copie les items, sans l'id
+                    List<Integer> spell = spellsList.get(spellIndex);
+                    List<Integer> spellItems = new ArrayList<Integer>();
+                    for (int j=1; j < spell.size(); j++) {
+                        spellItems.add(spell.get(j));
+                    }
+
+                    if (!inventoryIsGood(spellItems, inventory)) {
+                        spellToCastId = findSpellToCast(spellItems, spellsList, inventory);
+                    }
+                }
+               
+            }
         }
 
-
-        System.err.println("Sort à caster:" + spellToCast);
-        return spellToCast;
+        return spellToCastId;
     }
 
+    public static int findSpellForItem(int itemIndex) {
+        System.err.println("itemIndex : " + itemIndex);
+        int spellId = -1;
+        for (List<Integer> spell : spellsSavedList) {
+            if (spell.get(itemIndex+1) > 0) {
+                spellId = spell.get(0);
+            }
+        }
+        return spellId;
+    }
     public static boolean spellIsAvailable (int spellId, ArrayList<List<Integer>> spellsList) {
         for (List<Integer> spell : spellsList) {
             if (spellId == spell.get(0)) {
