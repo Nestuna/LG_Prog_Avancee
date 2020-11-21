@@ -12,44 +12,71 @@ import java.lang.Object;
  * the standard input according to the problem statement.
  **/
 class Player {
-    // public static boolean possibleCommand(int[][] inventory) {
-    //     for (int i = 0; i < inventory.length; i++) {
-    //         for(int j = 0; j < inventory[0].length; j++) {
-    //             if(inventory[i][j] == 0) return false;
-    //         }
-    //     }
-    //     return true;
-    // }
-    // public static ArrayList<Integer> findPossiblesCommands(int[][] commands, int[][] inventory) {
-    //     ArrayList<Integer> possiblesCommands = new ArrayList<Integer>();
-    //     int[][] inventoryAfterSpell = new int[inventory.length][inventory[0].length];
-
-    //     for (int i = 2; i < commands.length; i++) {
-    //         for (int j = 2; j < 4; j++) {
-    //             inventoryAfterSpell[i][j] = inventory[i][j] + commands[i][j];
-    //         }
-    //         if(possibleCommand(inventoryAfterSpell)) possiblesCommands.add(commands[i][0]);
-    //     }
-
-    //     return possiblesCommands;
-    // }
     // GLOBAL VARIABLES
-    static ArrayList<List<Integer>> listOfSpells = new ArrayList<List<Integer>> () ;
-    static Boolean spellsSaved = false;
+    static ArrayList<List<Integer>> spellsSavedList = new ArrayList<List<Integer>> () ;
+    static Boolean spellsAreSaved = false; 
 
     public static void saveSpells(List<Integer> spell) {
-        System.err.println(spell);
-        listOfSpells.add(spell);
+        spellsSavedList.add(spell);
     }
-    public static int mostRupees(ArrayList<List<Integer>> commands) {
-        int actionId = commands.get(0).get(0);
+
+    public static String actionToMake(ArrayList<List<Integer>> commands, List<Integer> inventoryPlayer) {
+        int commandId;
+        String action;
+        List<Integer> command = mostRupees(commands);
+        if (!possibleCommand(command, inventoryPlayer)) {
+            action = castCommand(command, inventoryPlayer);
+        } else {
+            action = "BREW " + commandId;
+        }
+        return action;
+    }
+
+    public static List<Integer> mostRupees(ArrayList<List<Integer>> commands) {
+        List<Integer> mostProfitableCommand = commands.get(0);
         int higherPrice = commands.get(0).get(5);
-        for(List<Integer> i : commands)
-            if(i.get(5) > higherPrice) {
-                actionId = i.get(0);
-                higherPrice = i.get(5);
+        for(List<Integer> command : commands)
+            if(command.get(5) > higherPrice) {
+                higherPrice = command.get(5);
+                mostProfitableCommand = command;
             }
-        return actionId;
+        System.err.println("Commande la plus rentable :" + mostProfitableCommand);
+        return mostProfitableCommand;
+    }
+
+    public static boolean possibleCommand(List<Integer> command, List<Integer> inventory) {
+        for (int i = 1; i < command.size() - 1; i++) {
+            if ((inventory.get(i) + command.get(i)) < 0) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    public static String castCommand(List<Integer> command, List<Integer> inventory) {
+        List<Integer> itemsToCast = findItemsToCast(command, inventory);
+        int spellToCast = findSpellToCast(itemsToCast);
+        String castAction;
+
+        return castAction;
+    }
+
+    public static List<Integer> findItemsToCast(List<Integer> command, List<Integer> inventory) {
+        List<Integer> itemsToCast = new ArrayList<Integer>(Arrays.asList(0,0,0,0));
+        for (int i = 1; i < command.size() - 1; i++) {
+            if ((inventory.get(i) + command.get(i)) < 0) {
+                itemsToCast.set(i-1, inventory.get(i) + command.get(i));
+            }
+        }
+        System.err.println("Items à caster:" + itemsToCast);
+        return itemsToCast;
+    }
+
+    public static int findSpellToCast(List<Integer> items) {
+        int spellToCast;
+
+        System.err.println("Sort à caster:" + spellToCast);
+        return spellToCast;
     }
 
     public static void main(String args[]) {
@@ -58,12 +85,15 @@ class Player {
         // game loop
         while (true) {
             int actionCount = in.nextInt(); // the number of spells and recipes in play
+            System.err.println("actionCount :" + actionCount);
 
             // INIT VARIABLES
-            ArrayList<List<Integer>> commandsArray = new ArrayList<List<Integer>>();
-            ArrayList<List<Integer>> spellsPlayerArray = new ArrayList<List<Integer>>();
-            ArrayList<List<Integer>> spellsOpponentArray = new ArrayList<List<Integer>>();
-            int[] inventoryArray = new int[5];
+            ArrayList<List<Integer>> commandsList = new ArrayList<List<Integer>>();
+            ArrayList<List<Integer>> spellsPlayerList = new ArrayList<List<Integer>>();
+            ArrayList<List<Integer>> spellsOpponentList = new ArrayList<List<Integer>>();
+            List<Integer> inventoryPlayerList = new ArrayList<Integer>();
+            List <Integer> inventoryOpponentList = new ArrayList<Integer>();
+            spellsAreSaved = spellsSavedList.size() > 0; // false au début du jeu
 
             for (int i = 0; i < actionCount; i++) {
                 int actionId = in.nextInt(); // the unique ID of this spell or recipe
@@ -78,41 +108,30 @@ class Player {
                 boolean castable = in.nextInt() != 0; // in the first league: always 0; later: 1 if this is a castable player spell
                 boolean repeatable = in.nextInt() != 0; // for the first two leagues: always 0; later: 1 if this is a repeatable player spell
                 
-                // HashMap<Object, Object> command = new HashMap<Object,Object>() {{
-                //     put("actionId" , actionId);
-                //     put("actionType", actionType);
-                //     put("delta0" , delta0);
-                //     put("delta1" , delta1);
-                //     put("delta1" , delta2);
-                //     put("delta1" , delta3);
-                //     put("delta1" , price);
-                //     put("tomeIndex", tomeIndex);
-                //     put("taxCount", taxCount);
-                //     put("castable", castable);
-                //     put("repetable", repeatable);
-                // }};
 
-                // SPELLS
+
+                // SPELLS : on verifie si c'est un sort, et à qui appartient ce sort
                 if (castable) {
-                    if (spellsPlayerArray.size() <= 5) {
+                    if (actionType.equals("CAST")) {
                         List<Integer> spell = Arrays.asList(actionId, delta0, delta1, delta2, delta3);
-                        spellsPlayerArray.add(spell);
-                    } else {
-                        List<Integer> spell = Arrays.asList(actionId, delta0, delta1, delta2, delta3);
-                        spellsOpponentArray.add(spell);
-                        if (!spellsSaved) {
+                        spellsPlayerList.add(spell);
+                        // On stocke la liste des sorts initiaux
+                        if (!spellsAreSaved) {
                             saveSpells(spell);
                         }
+                    } else if (actionType.equals("OPPONENT_CAST")) {
+                        List<Integer> spell = Arrays.asList(actionId, delta0, delta1, delta2, delta3);
+                        spellsOpponentList.add(spell);
                     }
-                    
+
                 } else {
                     List<Integer> command = Arrays.asList(actionId, delta0, delta1, delta2, delta3, price);
-                    commandsArray.add(command);
+                    commandsList.add(command);
                 }
+               
+               
             }
-            
-            // SAUVEGARDE DES SORTS INITAUX
-            spellsSaved = true;
+        
 
            for (int i = 0; i < 2; i++) {
                 int inv0 = in.nextInt(); // tier-0 ingredients in inventory
@@ -121,23 +140,21 @@ class Player {
                 int inv3 = in.nextInt();
                 int score = in.nextInt(); // amount of rupees
                 if (i==0) {
-                    inventoryArray[0] = inv0;
-                    inventoryArray[1] = inv1;
-                    inventoryArray[2] = inv2;
-                    inventoryArray[3] = inv3;
-                    inventoryArray[4] = score;
+                    inventoryPlayerList = Arrays.asList(inv0, inv1, inv2, inv3, score);
+                } else if (i==1) {
+                    inventoryOpponentList = Arrays.asList(inv0, inv1, inv2, inv3, score);
                 }
 
             }
             
             // Write an action using System.out.println()
             // To debug: System.err.println("Debug messages...");
-            System.err.println("Sorts disponible: " + spellsPlayerArray);
-            System.err.println("Sorts sauvegardés: " + listOfSpells);
-
-            // System.err.println(findPossiblesCommands(commandsArray, inventoryArray));
+            System.err.println("Sorts sauvegardés: " + spellsSavedList);
+            System.err.println("Sorts Joueur disponible: " + spellsPlayerList);
+            System.err.println("Sorts Adversaire disponible: " + spellsPlayerList);
+            
             // in the first league: BREW <id> | WAIT; later: BREW <id> | CAST <id> [<times>] | LEARN <id> | REST | WAIT
-            String action = Integer.toString(mostRupees(commandsArray));
+            String action = actionToMake(commandsList, inventoryPlayerList));
             System.out.println("BREW " + action );
         }
     }
