@@ -32,6 +32,17 @@ class Player {
 
         return index;
     }
+    public static boolean inventoryIsGood(List<Integer> itemList, List<Integer> inventory) {
+        // Verifie que l'iventaire contient tous les ingredients necessaires
+        for (int i = 0; i < itemList.size(); i++) {
+            if ((inventory.get(i) + itemList.get(i)) < 0) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    
     // ACTION & COMMAND ---------------------------------------
     public static String actionToMake(ArrayList<List<Integer>> commands, List<Integer> inventoryPlayer, ArrayList<List<Integer>> spellsList) {
         // Fonction principale appeler par le programme
@@ -68,16 +79,6 @@ class Player {
             }
         System.err.println("Commande la plus rentable :" + mostProfitableCommand);
         return mostProfitableCommand;
-    }
-
-    public static boolean inventoryIsGood(List<Integer> itemList, List<Integer> inventory) {
-        // Verifie que l'iventaire contient tous les ingredients necessaires
-        for (int i = 0; i < itemList.size(); i++) {
-            if ((inventory.get(i) + itemList.get(i)) < 0) {
-                return false;
-            }
-        }
-        return true;
     }
 
     // CAST ---------------------------------------
