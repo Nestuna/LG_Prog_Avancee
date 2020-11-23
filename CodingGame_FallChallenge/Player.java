@@ -18,9 +18,11 @@ class Player {
 
     // UTILS ---------------------------------------
     public static void saveSpells(List<Integer> spell) {
+        // Copie les sorts initiaux. Utile pour savoir s'il faut REST ou pas.
         spellsSavedList.add(spell);
     }
     public static int findIndexWithId(int id, ArrayList<List<Integer>> list) {
+        // Permet d'avoir l'index d'une liste dans une liste grâce à son id 
         int index = -1;
         for (int i = 0; i < list.size(); i++) {
             if (list.get(i).get(0) == id) {
@@ -32,12 +34,14 @@ class Player {
     }
     // ACTION & COMMAND ---------------------------------------
     public static String actionToMake(ArrayList<List<Integer>> commands, List<Integer> inventoryPlayer, ArrayList<List<Integer>> spellsList) {
+        // Fonction principale appeler par le programme
+        // Renvoit l'action à effectuer
         String action;
         List<Integer> command = mostRupees(commands);
         int commandId = command.get(0);
         List<Integer> commandItems = new ArrayList<Integer>();
 
-        // On copie les items, sans l'actionId et le prix pour plus de faciliter
+        // On copie les items, sans l'actionId et le prix pour plus de facilitée
         for (int i=2; i < command.size(); i++) {
             commandItems.add(command.get(i));
         }
@@ -54,6 +58,7 @@ class Player {
     }
 
     public static List<Integer> mostRupees(ArrayList<List<Integer>> commands) {
+        // Renvoit la commande la plus rentable parmi une liste de commande
         List<Integer> mostProfitableCommand = commands.get(0);
         int higherPrice = commands.get(0).get(1);
         for(List<Integer> command : commands)
@@ -66,6 +71,7 @@ class Player {
     }
 
     public static boolean inventoryIsGood(List<Integer> itemList, List<Integer> inventory) {
+        // Verifie que l'iventaire contient tous les ingredients necessaires
         for (int i = 0; i < itemList.size(); i++) {
             if ((inventory.get(i) + itemList.get(i)) < 0) {
                 return false;
@@ -76,6 +82,9 @@ class Player {
 
     // CAST ---------------------------------------
     public static String castCommand(List<Integer> command, List<Integer> inventory, ArrayList<List<Integer>> spellsList) {
+        // Cherche à avoir les ingredients necessaire pour effectuer une commande
+        // grâce aux sorts
+        // Renvoit l'action à effectuer
         List<Integer> itemsToCast = findItemsToCast(command, inventory);
         int actionId = findSpellToCast(itemsToCast, spellsList, inventory);
         String action;
@@ -88,6 +97,7 @@ class Player {
     }
 
     public static List<Integer> findItemsToCast(List<Integer> itemsList, List<Integer> inventory) {
+        // Renvoit les ingredients qui doivent être construit grâce à un sort
         List<Integer> itemsToCast = new ArrayList<Integer>(Arrays.asList(0,0,0,0));
         for (int i = 0; i < itemsList.size(); i++) {
             if ((inventory.get(i) + itemsList.get(i)) < 0) {
@@ -99,6 +109,8 @@ class Player {
     }
 
     public static int findSpellToCast(List<Integer> itemsList, ArrayList<List<Integer>> spellsList, List<Integer> inventory) {
+        // Trouve le sort à effectuer 
+        // Renvoit l'id du sort 
         int spellToCastId = 0;
 
         for (int i = 0; i < itemsList.size(); i++) {
@@ -125,11 +137,12 @@ class Player {
                
             }
         }
-
         return spellToCastId;
     }
 
     public static int findSpellForItem(int itemIndex) {
+        // Trouver le sort qui correspond à un ingrédient
+        // Renvoit l'id du sort
         System.err.println("itemIndex : " + itemIndex);
         int spellId = -1;
         for (List<Integer> spell : spellsSavedList) {
@@ -139,15 +152,6 @@ class Player {
         }
         return spellId;
     }
-    public static boolean spellIsAvailable (int spellId, ArrayList<List<Integer>> spellsList) {
-        for (List<Integer> spell : spellsList) {
-            if (spellId == spell.get(0)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
     public static void main(String args[]) {
         Scanner in = new Scanner(System.in);
 
