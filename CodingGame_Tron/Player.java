@@ -29,33 +29,33 @@ class Robot {
     }
 
     // ------------------------------ Coordonates
-    public int getX() {
+    public int getX () {
         return this.curX;
     }
 
-    public int getY() {
+    public int getY () {
         return this.curY;
     }
 
-    public void setX(int x) {
+    public void setX (int x) {
         this.curX = x;
     }
 
-    public void setY(int y) {
+    public void setY (int y) {
         this.curY = y;
     }
 
-    public int[] getPosition() {
+    public int[] getPosition () {
         int[] position = {this.curX, this.curY}; 
         return position;
     }
 
-    public void setPosition(int x1, int y1) {
+    public void setPosition (int x1, int y1) {
         this.curX = x1;
         this.curY = y1;
     }
 
-    public void setPosition(int x0, int y0, int x1, int y1) {
+    public void setPosition (int x0, int y0, int x1, int y1) {
         this.initX = x0;
         this.initY = y0;
         this.curX = x1;
@@ -63,19 +63,19 @@ class Robot {
     }
 
     // ------------------------------ Distances
-    public int getDistanceFromX(int x) {
+    public int getDistanceFromX (int x) {
         return Math.abs(this.curX - x);
     }
 
-    public int getDistanceFromY(int y) {
+    public int getDistanceFromY (int y) {
         return Math.abs(this.curY - y);
     }
 
-    public int getDistanceFromInitX() {
+    public int getDistanceFromInitX () {
         return Math.abs(this.initX - this.curX);
     }
 
-    public int getDistanceFromInitY() {
+    public int getDistanceFromInitY () {
         return Math.abs(this.initY - this.curY);
     }
 
@@ -88,11 +88,11 @@ class Robot {
 
 class OpponentRobot extends Robot {
    
-    OpponentRobot() {
+    OpponentRobot () {
         super();
     }
 
-    OpponentRobot(int x0, int y0, int x1, int y1) {
+    OpponentRobot (int x0, int y0, int x1, int y1) {
         super (x0, y0, x1, y1);
     }
 
@@ -100,11 +100,11 @@ class OpponentRobot extends Robot {
 
 class PlayerRobot extends Robot {
     
-    PlayerRobot() {
+    PlayerRobot () {
         super();
     }
 
-    PlayerRobot(int x0, int y0, int x1, int y1) {
+    PlayerRobot (int x0, int y0, int x1, int y1) {
         super(x0, y0, x1, y1);
     }
 
@@ -113,15 +113,115 @@ class PlayerRobot extends Robot {
     }
 }
 
+class Grid {
+    private int x;
+    private int y;
+    private int[][] map;
+
+    Grid () {
+        this.x = 30;
+        this.y = 20;
+        createMap(this.x, this.y);
+    }
+
+    Grid (int x, int y) {
+        this.x = x;
+        this.y = y;
+        createMap(x, y);
+    }
+
+    public void createMap (int x, int y) {
+        this.map = new int[x][y];
+        for (int i=0; i < x; i++) {
+            for (int j=0; j < y; j++) {
+                this.map[i][j] = 0;
+            }
+        }
+    }
+
+    public ArrayList<Integer[]> getLinePositionsOnMap(int player) {
+        ArrayList<Integer[]> positions = new ArrayList<Integer[]>(); 
+        for(int x = 0; x < this.x; x++) {
+            for(int y = 0; y < this.y; y++) {
+                if (this.map[x][y] == player) {
+                    Integer[] pos = {x, y};
+                    positions.add(pos);
+                }
+            }
+        }
+        return positions;
+    }
+
+    public void setLinePositionOnMap (int x, int y, int player) {
+        // player = 1 if player, 2 if opponent
+        this.map[x][y] = player;
+    }
+    @Override
+    public String toString() {
+        String mapStr = "";
+        for(int j = 0 ; j < this.y ; j++) {
+			for (int i = 0 ; i < this.x ; i++)
+                mapStr += this.map[i][j];
+            mapStr += "\n";
+		}
+        return mapStr;
+    }
+
+    
+}
 
 class Player {
+    // Robots
+    static PlayerRobot player = null;
+    static HashMap<Integer, Robot> opponentsMap = new HashMap<Integer, Robot>();
+    static Grid map = new Grid();
+
+    public static Boolean isWall(int x, int y) {
+        if(x < 0 || x >= 30 || y < 0 || y >= 20 )
+            return true;
+        return false;
+    }
+
+    public static String moveToMake(PlayerRobot player, HashMap<Integer, Robot> opponentsMap, Grid map) {
+        String[] moves = {"UP",  "DOWN", "LEFT", "RIGHT"};
+        String moveToMake = "";
+        int curX = player.getX();
+        int curY = player.getY();
+        int nextX = -1;
+        int nextY = -1;
+        
+        int i = 0;
+        while (isWall(nextX, nextY) && i < moves.length) {
+            switch(moves[i]) {
+                case "UP":
+                    nextX = curX;
+                    nextY  = curY - 1;
+                    break;
+                case "DOWN":
+                    nextX = curX;
+                    nextY  = curY + 1;
+                    break;
+                case "LEFT":
+                    nextX = curX - 1;
+                    nextY = curY;
+                    break;
+                case "RIGHT":
+                    nextX = curX + 1;
+                    nextY = curY;
+                    break;
+                default:
+                    return "UP";
+            }
+            moveToMake = moves[i];
+            i++;
+        }
+        System.err.println("curPosition : " + "[" + curX + "," + curY + "]");
+        System.err.println("nextPosition : " + "[" + nextX + "," + nextY + "]");
+        return moveToMake;
+    }
+    
     public static void main(String args[]) {
-        // Robots
-        PlayerRobot player = null;
-        HashMap<Integer, Robot> opponentsMap = new HashMap<Integer, Robot>();
-
         Scanner in = new Scanner(System.in);
-
         // game loop
         while (true) {
             int N = in.nextInt(); // total number of players (2 to 4).
@@ -135,30 +235,36 @@ class Player {
                 if (i == P) {
                     if (player == null) {
                         player = new PlayerRobot(X0,Y0,X1,Y1);
+                        map.setLinePositionOnMap(X0, Y0, 1);
+                        
                     } else {
                         player.setPosition(X1,Y1);
                     }
+                    map.setLinePositionOnMap(X1, Y1, 1);
                 } else {
                     if (opponentsMap.size() < N - 1) {
                         Robot opponent = new OpponentRobot(X0,Y0,X1,Y1);
                         opponentsMap.put(i, opponent); 
+                        map.setLinePositionOnMap(X0, Y0, 2);
                     } else {
                         Robot opponent = opponentsMap.get(i);
                         opponent.setPosition(X1, Y1);
                         opponentsMap.put(i, opponent);    
                     }
+                    map.setLinePositionOnMap(X1, Y1, 2);
                 }
             }
 
             // DEBUG
-            System.err.println("Player :");
-            System.err.println(player);
-            System.err.println("Opponent :");
-            System.err.println(opponentsMap);
-            
+            // System.err.println("Player :");
+            // System.err.println(player);
+            // System.err.println("Opponent :");
+            // System.err.println(opponentsMap);
+           
 
             // ACTION
-            System.out.println(player.move()); // A single line with UP, DOWN, LEFT or RIGHT
+            String move = moveToMake(player, opponentsMap, map);
+            System.out.println(move);
         }
     }
 }
