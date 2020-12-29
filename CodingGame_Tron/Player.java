@@ -1,6 +1,4 @@
 import java.util.*;
-import java.io.*;
-import java.math.*;
 
 /**
  * Auto-generated code below aims at helping you parse
@@ -12,7 +10,6 @@ class Robot {
     private int initY;
     private int curX;
     private int curY;
-    private List<ArrayList> tailPositions;
 
     Robot() {
         this.initX = 0;
