@@ -139,11 +139,11 @@ class Grid {
         }
     }
 
-    public ArrayList<Integer[]> getLinePositionsOnMap(int player) {
-        ArrayList<Integer[]> positions = new ArrayList<Integer[]>(); 
+    public ArrayList<Integer[]> getLinesPositions() {
+        ArrayList<Integer[]> positions = new ArrayList<Integer[]>();
         for(int x = 0; x < this.x; x++) {
             for(int y = 0; y < this.y; y++) {
-                if (this.map[x][y] == player) {
+                if (this.map[x][y] > 0) {
                     Integer[] pos = {x, y};
                     positions.add(pos);
                 }
@@ -152,10 +152,35 @@ class Grid {
         return positions;
     }
 
-    public void setLinePositionOnMap (int x, int y, int player) {
+    public ArrayList<ArrayList<Integer>> getRobotLinePositions(int robotId) {
+        ArrayList<ArrayList<Integer>> positions = new ArrayList<ArrayList<Integer>>();
+        for(int x = 0; x < this.x; x++) {
+            for(int y = 0; y < this.y; y++) {
+                if (this.map[x][y] == robotId) {
+                    ArrayList<Integer> pos = new ArrayList<Integer>(Arrays.asList(x, y));
+                    positions.add(pos);
+                }
+            }
+        }
+        return positions;
+    }
+
+    public void setLinePosition (int x, int y, int player) {
         // player = 1 if player, 2 if opponent
         this.map[x][y] = player;
     }
+
+    public Boolean isWall(int x, int y) {
+        if(x < 0 || x >= this.x || y < 0 || y >= this.y )
+            return true;
+        return false;
+    }
+
+    public Boolean isLine(int x, int y) {
+        if (this.map[x][y] > 0) return true;
+        return false;
+    }
+
     @Override
     public String toString() {
         String mapStr = "";
@@ -167,7 +192,6 @@ class Grid {
         return mapStr;
     }
 
-    
 }
 
 class Player {
@@ -176,10 +200,10 @@ class Player {
     static HashMap<Integer, Robot> opponentsMap = new HashMap<Integer, Robot>();
     static Grid map = new Grid();
 
-    public static Boolean isWall(int x, int y) {
-        if(x < 0 || x >= 30 || y < 0 || y >= 20 )
-            return true;
-        return false;
+    public static Boolean isCorrectMove(int x, int y) {
+        if (map.isWall(x, y)) return false;
+        else if (map.isLine(x,y)) return false;
+        else return true;
     }
 
     public static String moveToMake(PlayerRobot player, HashMap<Integer, Robot> opponentsMap, Grid map) {
@@ -189,9 +213,9 @@ class Player {
         int curY = player.getY();
         int nextX = -1;
         int nextY = -1;
-        
+
         int i = 0;
-        while (isWall(nextX, nextY) && i < moves.length) {
+        while (!isCorrectMove(nextX, nextY) && i < moves.length) {
             switch(moves[i]) {
                 case "UP":
                     nextX = curX;
@@ -235,23 +259,23 @@ class Player {
                 if (i == P) {
                     if (player == null) {
                         player = new PlayerRobot(X0,Y0,X1,Y1);
-                        map.setLinePositionOnMap(X0, Y0, 1);
+                        map.setLinePosition(X0, Y0, 1);
                         
                     } else {
                         player.setPosition(X1,Y1);
                     }
-                    map.setLinePositionOnMap(X1, Y1, 1);
+                    map.setLinePosition(X1, Y1, 1);
                 } else {
                     if (opponentsMap.size() < N - 1) {
                         Robot opponent = new OpponentRobot(X0,Y0,X1,Y1);
                         opponentsMap.put(i, opponent); 
-                        map.setLinePositionOnMap(X0, Y0, 2);
+                        map.setLinePosition(X0, Y0, 2);
                     } else {
                         Robot opponent = opponentsMap.get(i);
                         opponent.setPosition(X1, Y1);
                         opponentsMap.put(i, opponent);    
                     }
-                    map.setLinePositionOnMap(X1, Y1, 2);
+                    map.setLinePosition(X1, Y1, 2);
                 }
             }
 
