@@ -1,93 +1,69 @@
 import java.util.*;
 
+import javax.sound.midi.SysexMessage;
 /**
  * Auto-generated code below aims at helping you parse
  * the standard input according to the problem statement.
  **/
 
 class Robot {
-    private int initX;
-    private int initY;
-    private int curX;
-    private int curY;
-
-    Robot() {
-        this.initX = 0;
-        this.initY = 0;
-        this.curX = 0;
-        this.curY = 0;
-    }
+    private Boolean isOpponent;
+    private Position initPosition; 
+    private Position currentPosition;
 
     Robot (int x0, int y0, int x1, int y1) {
-        this.initX = x0;
-        this.initY = y0;
-        this.curX = x1;
-        this.curY = y1;
+        this.initPosition = new Position(x0, y0) ;
+        this.currentPosition = new Position(x1, y1);
     }
 
     // ------------------------------ Coordonates
-    public int getX () {
-        return this.curX;
+    public Position getInitPosition () {
+        return this.initPosition;
     }
 
-    public int getY () {
-        return this.curY;
+    public Position getPosition () {
+        return this.currentPosition;
     }
 
     public void setX (int x) {
-        this.curX = x;
+        this.currentPosition.setX(x);
     }
 
     public void setY (int y) {
-        this.curY = y;
-    }
-
-    public int[] getPosition () {
-        int[] position = {this.curX, this.curY}; 
-        return position;
+        this.currentPosition.setY(y);
     }
 
     public void setPosition (int x1, int y1) {
-        this.curX = x1;
-        this.curY = y1;
-    }
-
-    public void setPosition (int x0, int y0, int x1, int y1) {
-        this.initX = x0;
-        this.initY = y0;
-        this.curX = x1;
-        this.curY = y1;
+        this.currentPosition.setX(x1);
+        this.currentPosition.setY(y1);
     }
 
     // ------------------------------ Distances
     public int getDistanceFromX (int x) {
-        return Math.abs(this.curX - x);
+        return Math.abs(this.currentPosition.getX() - x);
     }
 
     public int getDistanceFromY (int y) {
-        return Math.abs(this.curY - y);
+        return Math.abs(this.currentPosition.getY() - y);
     }
 
     public int getDistanceFromInitX () {
-        return Math.abs(this.initX - this.curX);
+        return Math.abs(this.initPosition.getX() - this.currentPosition.getX());
     }
 
     public int getDistanceFromInitY () {
-        return Math.abs(this.initY - this.curY);
+        return Math.abs(this.initPosition.getY() - this.currentPosition.getY());
     }
 
 
     @Override
     public String toString() {
-        return (" initX = " + initX + "\n initY = " + initY + "\n curX = " + curX + "\n curY = " + curY);
+        String robotStatus = isOpponent ? "Oppennent" : "Player";
+        return robotStatus + ":\n" + "\t Init = " + this.initPosition.toString() + "\n\t Current = " + this.currentPosition.toString();
     }
 }
 
 class OpponentRobot extends Robot {
-   
-    OpponentRobot () {
-        super();
-    }
 
     OpponentRobot (int x0, int y0, int x1, int y1) {
         super (x0, y0, x1, y1);
@@ -96,17 +72,9 @@ class OpponentRobot extends Robot {
 }
 
 class PlayerRobot extends Robot {
-    
-    PlayerRobot () {
-        super();
-    }
 
     PlayerRobot (int x0, int y0, int x1, int y1) {
         super(x0, y0, x1, y1);
-    }
-
-    public String move() {
-        return "LEFT";
     }
 }
 
@@ -124,8 +92,15 @@ class Grid {
     Grid (int x, int y) {
         this.x = x;
         this.y = y;
-        createMap(x, y);
+        createMap(this.x, this.y);
     }
+
+    Grid (Position position) {
+        this.x = position.getX();
+        this.y = position.getY();
+        createMap(this.x, this.y);
+    }
+
 
     public void createMap (int x, int y) {
         this.map = new int[x][y];
@@ -136,12 +111,12 @@ class Grid {
         }
     }
 
-    public ArrayList<Integer[]> getLinesPositions() {
-        ArrayList<Integer[]> positions = new ArrayList<Integer[]>();
+    public ArrayList<Position> getLinesPositions() {
+        ArrayList<Position> positions = new ArrayList<Position>();
         for(int x = 0; x < this.x; x++) {
             for(int y = 0; y < this.y; y++) {
                 if (this.map[x][y] > 0) {
-                    Integer[] pos = {x, y};
+                    Position pos = new Position(x, y);
                     positions.add(pos);
                 }
             }
@@ -167,14 +142,41 @@ class Grid {
         this.map[x][y] = player;
     }
 
+    public void setLinePosition (Position position, int player) {
+        x = position.getX();
+        y = position.getY();
+        // player = 1 if player, 2 if opponent
+        this.map[x][y] = player;
+    }
+
     public Boolean isWall(int x, int y) {
-        if(x < 0 || x >= this.x || y < 0 || y >= this.y )
+        if(x < 0 || x >= this.x || y < 0 || y >= this.y)
             return true;
+        return false;
+    }
+
+    public Boolean isWall(Position position) {
+        int x = position.getX();
+        int y = position.getY();
+        if(x < 0 || x >= this.x || y < 0 || y >= this.y ) {
+            System.err.println("Wall !");
+            return true;
+        }
         return false;
     }
 
     public Boolean isLine(int x, int y) {
         if (this.map[x][y] > 0) return true;
+        return false;
+    }
+
+    public Boolean isLine(Position position) {
+        int x = position.getX();
+        int y = position.getY();
+        if (this.map[x][y] > 0) {
+            System.err.println("Line !");
+            return true;
+        } 
         return false;
     }
 
@@ -190,54 +192,277 @@ class Grid {
     }
 
 }
+class PathFinder {
+    public Graph graph;
+    public Grid map;
+    private ArrayList<LinkedList<Node>> paths;
+    private ArrayList<String> directions;
+    private HashSet<Node> visitedNodes;
+
+    PathFinder (){
+        this.graph = initGraph();
+    }
+
+    PathFinder (Grid map) {
+        this.map = map;
+        this.graph = initGraph();
+    }
+    
+    private Graph initGraph() {
+        Graph graph = new Graph(); 
+        for (int x = 0; x < Graph.X; x++) {
+            for (int y = 0; y < Graph.Y; y++) {
+                graph.addNode(new Position(x, y));
+            }
+        }
+        for (Node node : graph.getNodesList().values()) {
+            for (Position nextPosition : node.getPosition().nextPositions().values()) {
+                Node nextNode = graph.getNode(nextPosition);
+                if (nextNode != null) {
+                    node.connect(nextNode);
+                }
+            }
+        }
+        return graph;
+    }
+
+    @Override
+    public String toString() {
+        return this.graph.toString();
+    }
+
+    public LinkedList<Node> findAllPaths(Position startPosition, Position endPosition) {
+        LinkedList<Node> queue = new LinkedList<>();
+        LinkedList<Node> visited = new LinkedList<>();
+        Node start = this.graph.getNode(startPosition);
+        Node end = this.graph.getNode(endPosition);
+
+        queue.add(start);
+        visited.add(start);
+        while(!visited.contains(end)) {
+            Node nextNode = queue.getFirst();
+            queue.pop();
+            for (Node node: nextNode.getNeighbors()) {
+                if (!visited.contains(node) && !visited.contains(end)) {
+                    queue.add(node);
+                    visited.add(node);
+                }
+            }
+        }
+        return visited;
+    }
+    
+    public ArrayList<LinkedList<Node>> findBestPaths (Position startPosition, Position endPosition) {
+        this.visitedNodes = new HashSet<>();
+        ArrayList<LinkedList<Node>> allPaths = new ArrayList<>();
+        LinkedList<Node> path = this.findAllPaths(startPosition, endPosition);
+        while (path.size() > 0) {
+            allPaths.add(path);
+            System.err.println(path);
+            path = findAllPaths(startPosition, endPosition);
+        }
+        return allPaths;
+    }
+}
+
+class Graph {
+    final static int X = 30, Y = 20;
+    private HashMap<Position, Node> nodesList;
+
+    Graph () {
+        nodesList = new HashMap<>();
+    }
+    
+    // ------------------------ Getters & Setters 
+    public Node getNode (int x, int y) {
+        Position position = new Position(x, y);
+        return nodesList.get(position);
+    }
+
+    public Node getNode (Position position) {
+        return nodesList.get(position);
+    }
+
+    public HashMap<Position, Node> getNodesList () {
+        return nodesList;
+    }
+
+    public Node addNode (Position position) {
+        Node node = new Node(position);
+        nodesList.put(position, node);
+        return node;
+    }
+
+    // ------------------------ Methods 
+   
+    @Override
+    public String toString () {
+        return nodesList.toString();
+    }
+}
+
+class Node {
+    private Position position;
+    private HashSet<Node> neighbors;
+    private int distance;
+
+    Node (int x, int y) {
+        this.position = new Position(x, y);
+    }
+
+    Node (Position position) {
+        this.position = position;
+        this.neighbors = new HashSet<>();
+    }
+
+    Node (Position position, int distance) {
+        this.position = position;
+        this.distance = distance;
+        this.neighbors = new HashSet<>();
+
+    }
+
+    // ------------------------ Getters & Setters
+    public Position getPosition() {
+        return this.position;
+    }
+
+    public HashSet<Node> getNeighbors() {
+        return this.neighbors;
+    }
+
+    public int getDistance() {
+        return this.distance;
+    }
+
+    public void setDistance(int distance) {
+        this.distance = distance;
+    }
+
+    // ------------------------ Methods 
+    public void connect(Node node) {
+        if (node != this) {
+            this.neighbors.add(node);
+            node.neighbors.add(this);
+        }
+    }
+
+    @Override
+    public String toString() {
+        return this.position.toString();
+    }
+
+    public String neighborsToString () {
+        String str = " [ "; 
+		for (Node neighbor : this.neighbors)
+			str += neighbor.getPosition().toString() + " ";
+		return str + "]\n";
+    }
+}
+
+class Position {
+    private int x;
+    private int y;
+    public HashMap<String, Position> nextPositions;
+
+    Position(int x, int y) {
+        this.x = x;
+        this.y = y;
+    }
+
+    @Override
+	public int hashCode()
+	{
+		return Graph.X * x + y;
+    }
+    
+    // Getters & Setters
+    public int getX () {
+        return this.x;
+    }
+
+    public int getY () {
+        return this.y;
+    }
+
+    public void setX (int x) {
+        this.x = x;
+    }
+
+    public void setY (int y) {
+        this.y = y;
+    }
+
+    public void setPosition (Position position) {
+        this.x = position.x;
+        this.y = position.y;
+    }
+
+    public HashMap<String, Position> nextPositions () {
+        this.nextPositions =  new HashMap<>();
+        this.nextPositions.put("up", new Position(this.x, this.y - 1));
+        this.nextPositions.put("right",  new Position(this.x + 1, this.y));
+        this.nextPositions.put("down", new Position(this.x, this.y + 1));
+        this.nextPositions.put("left", new Position(this.x - 1, this.y));
+        return this.nextPositions;
+    }
+
+    @Override
+    public String toString() {
+        return String.format("(%1$d , %2$d)", this.x, this.y);
+    }
+
+    @Override
+	public boolean equals(Object pos) {
+		Position other = (Position) pos;
+		return other.x == x && other.y == y;
+	}
+}
 
 class Player {
-    // Robots
+    // Robots and map attributs
     static PlayerRobot player = null;
-    static HashMap<Integer, Robot> opponentsMap = new HashMap<Integer, Robot>();
+    static HashMap<Integer, Robot> opponentsList = new HashMap<Integer, Robot>();
     static Grid map = new Grid();
 
-    public static Boolean isCorrectMove(int x, int y) {
-        if (map.isWall(x, y)) return false;
-        else if (map.isLine(x,y)) return false;
+    // Game Main Functions
+    public static Boolean isCorrectMove(Position position) {
+        if (map.isWall(position)) return false;
+        else if (map.isLine(position)) return false;
         else return true;
     }
 
-    public static String moveToMake(PlayerRobot player, HashMap<Integer, Robot> opponentsMap, Grid map) {
-        String[] moves = {"UP",  "DOWN", "LEFT", "RIGHT"};
+    public static String moveToMake(PlayerRobot player, HashMap<Integer, Robot> opponentsList, Grid map) {
+        String[] moves = {"UP", "RIGHT", "DOWN", "LEFT"};
         String moveToMake = "";
-        int curX = player.getX();
-        int curY = player.getY();
-        int nextX = -1;
-        int nextY = -1;
+        Position curPos = player.getPosition();
+        Position nextPos = new Position(-1,-1);
 
         int i = 0;
-        while (!isCorrectMove(nextX, nextY) && i < moves.length) {
+        while (!isCorrectMove(nextPos)) {
             switch(moves[i]) {
                 case "UP":
-                    nextX = curX;
-                    nextY  = curY - 1;
+                    nextPos.setPosition(curPos.nextPositions().get("up"));
                     break;
                 case "DOWN":
-                    nextX = curX;
-                    nextY  = curY + 1;
+                    nextPos.setPosition(curPos.nextPositions().get("down"));
                     break;
                 case "LEFT":
-                    nextX = curX - 1;
-                    nextY = curY;
+                    nextPos.setPosition(curPos.nextPositions().get("left"));
                     break;
                 case "RIGHT":
-                    nextX = curX + 1;
-                    nextY = curY;
+                    nextPos.setPosition(curPos.nextPositions().get("right"));
                     break;
                 default:
-                    return "UP";
+                    nextPos.setPosition(curPos.nextPositions().get("up"));
+                    moveToMake = "UP";
             }
             moveToMake = moves[i];
-            i++;
+            i = (i >= moves.length - 1) ? 0 : i+1 ;
         }
-        System.err.println("curPosition : " + "[" + curX + "," + curY + "]");
-        System.err.println("nextPosition : " + "[" + nextX + "," + nextY + "]");
+
+        System.err.println("curPosition : " + "[" + curPos.getX() + "," + curPos.getY() + "]");
+        System.err.println("nextPosition : " + "[" + nextPos.getX() + "," + nextPos.getY() + "]");
         return moveToMake;
     }
     
@@ -263,28 +488,32 @@ class Player {
                     }
                     map.setLinePosition(X1, Y1, 1);
                 } else {
-                    if (opponentsMap.size() < N - 1) {
+                    if (opponentsList.size() < N - 1) {
                         Robot opponent = new OpponentRobot(X0,Y0,X1,Y1);
-                        opponentsMap.put(i, opponent); 
+                        opponentsList.put(i, opponent); 
                         map.setLinePosition(X0, Y0, 2);
                     } else {
-                        Robot opponent = opponentsMap.get(i);
+                        Robot opponent = opponentsList.get(i);
                         opponent.setPosition(X1, Y1);
-                        opponentsMap.put(i, opponent);    
+                        opponentsList.put(i, opponent);    
                     }
                     map.setLinePosition(X1, Y1, 2);
                 }
             }
 
             // DEBUG
-            // System.err.println("Player :");
-            // System.err.println(player);
-            // System.err.println("Opponent :");
-            // System.err.println(opponentsMap);
-           
+            // System.err.println("Player : \n" + player);
+            // System.err.println("Opponent : \n" + opponentsList);
+
+            Position start = new Position(0,0);
+            Position end = new Position(3,3);
+            PathFinder pathFinder = new PathFinder();
+
+            LinkedList<Node> allPaths = pathFinder.findAllPaths(start, end);
+            for (Node node : allPaths) System.err.println(node);         
 
             // ACTION
-            String move = moveToMake(player, opponentsMap, map);
+            String move = moveToMake(player, opponentsList, map);
             System.out.println(move);
         }
     }
