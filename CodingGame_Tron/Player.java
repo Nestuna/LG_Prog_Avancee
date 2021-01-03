@@ -586,9 +586,7 @@ class Player {
             if (distanceY >= 0) destination = new Position(lessX, start.getY());
         }
 
-        System.err.println("Corner destination : " + destination);
         if (destination != null && (destination.equals(start) || !isCorrectMove(destination))) destination = null;
-        System.err.println("Corner destination after check: " + destination);
         return destination; 
     }
     
