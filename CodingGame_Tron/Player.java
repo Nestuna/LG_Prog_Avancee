@@ -1,6 +1,7 @@
 import java.util.*;
 
 import javax.sound.midi.SysexMessage;
+
 /**
  * Auto-generated code below aims at helping you parse
  * the standard input according to the problem statement.
@@ -159,7 +160,6 @@ class Grid {
         int x = position.getX();
         int y = position.getY();
         if(x < 0 || x >= this.x || y < 0 || y >= this.y ) {
-            System.err.println("Wall !");
             return true;
         }
         return false;
@@ -174,7 +174,6 @@ class Grid {
         int x = position.getX();
         int y = position.getY();
         if (this.map[x][y] > 0) {
-            System.err.println("Line !");
             return true;
         } 
         return false;
@@ -195,17 +194,15 @@ class Grid {
 class PathFinder {
     public Graph graph;
     public Grid map;
-    private ArrayList<LinkedList<Node>> paths;
-    private ArrayList<String> directions;
-    private HashSet<Node> visitedNodes;
+    private LinkedList<Node> visitedNodes;
+    private Node start;
+    private LinkedList<String> directions;
 
-    PathFinder (){
-        this.graph = initGraph();
-    }
 
-    PathFinder (Grid map) {
+    PathFinder (Position startPosition, Grid map) {
         this.map = map;
         this.graph = initGraph();
+        this.start = this.graph.getNode(startPosition);
     }
     
     private Graph initGraph() {
@@ -231,46 +228,120 @@ class PathFinder {
         return this.graph.toString();
     }
 
-    public LinkedList<Node> findAllPaths(Position startPosition, Position endPosition) {
+    public boolean isCorrectMove(Position position) {
+        if (this.map.isWall(position)) return false;
+        else if (this.map.isLine(position)) return false;
+        else return true;
+    }
+
+    public String nextDirection(LinkedList<Node> path) {
+        String nextDirection = "DOWN";
+        Node prevNode = path.removeFirst();
+
+        if (!path.isEmpty()) {
+            Node nextNode = path.getFirst();
+        
+            Position nextPosition = nextNode.getPosition();
+            Position prevPosition = prevNode.getPosition();
+            for (String direction : prevPosition.nextPositions().keySet()) {
+                if (nextPosition.equals(prevPosition.nextPositions().get(direction))) {
+                    nextDirection = direction.toUpperCase();
+                }
+            }      
+        }
+        return nextDirection;
+    }
+
+    public String findShortestPath (Position endPosition) {
+        LinkedList<Node> nodes = findNodesForShortestPath(endPosition);
+        graph = connectPathNodes(nodes);
+        LinkedList<Node> path = findShortestPath(graph);
+        return nextDirection(path);
+    }
+
+    public LinkedList<Node> findShortestPath (Graph graphPath) {
+        // Le dernier noeud est la destination
+        // Il suffit de remonter le BFS à l'envers en cherchant le voisin dans la liste
+        // à partir de la destination
+        LinkedList<Node> nodesTree = new LinkedList<>(graphPath.getNodesList().values());
+        LinkedList<Node> reversePath = new LinkedList<>();
+        
+        Node lastNode = nodesTree.getLast();
+        reversePath = findShortestPath(reversePath, nodesTree, lastNode);
+        reversePath.addFirst(lastNode);
+
+        LinkedList<Node> path = new LinkedList<>();
+        while (!reversePath.isEmpty()) {
+            path.add(reversePath.getLast());
+            reversePath.removeLast();
+        }
+        return path;
+    }
+
+    public LinkedList<Node> findShortestPath(LinkedList<Node> path, LinkedList<Node> nodesTree, Node lastNode) {
+        if (lastNode.getPosition() != this.start.getPosition()) {
+            for (Node parentNode : nodesTree) {
+                for (Node childNode : parentNode.getNeighbors()) {
+                    if (childNode == lastNode) {
+                        lastNode = parentNode;
+                        path.add(lastNode);
+                        return findShortestPath(path, nodesTree, lastNode);
+                    }                 
+                }
+            }            
+        }
+        return path;
+    }
+
+    public LinkedList<Node> findNodesForShortestPath (Position endPosition) {
         LinkedList<Node> queue = new LinkedList<>();
-        LinkedList<Node> visited = new LinkedList<>();
-        Node start = this.graph.getNode(startPosition);
+        this.visitedNodes = new LinkedList<>();
         Node end = this.graph.getNode(endPosition);
 
-        queue.add(start);
-        visited.add(start);
-        while(!visited.contains(end)) {
+        queue.add(this.start);
+        visitedNodes.add(this.start);
+        while(!this.visitedNodes.contains(end) && !queue.isEmpty()) {
             Node nextNode = queue.getFirst();
             queue.pop();
             for (Node node: nextNode.getNeighbors()) {
-                if (!visited.contains(node) && !visited.contains(end)) {
+                if (!this.visitedNodes.contains(node) && !this.visitedNodes.contains(end) && isCorrectMove(node.getPosition())) {
                     queue.add(node);
-                    visited.add(node);
+                    this.visitedNodes.add(node);
                 }
             }
         }
-        return visited;
+        return this.visitedNodes;
     }
     
-    public ArrayList<LinkedList<Node>> findBestPaths (Position startPosition, Position endPosition) {
-        this.visitedNodes = new HashSet<>();
-        ArrayList<LinkedList<Node>> allPaths = new ArrayList<>();
-        LinkedList<Node> path = this.findAllPaths(startPosition, endPosition);
-        while (path.size() > 0) {
-            allPaths.add(path);
-            System.err.println(path);
-            path = findAllPaths(startPosition, endPosition);
+    Graph connectPathNodes (LinkedList<Node> nodesList) {
+        // On connecte les noeuds en sens unique pour avoir un chemin
+        Graph pathGraph = new Graph();
+        for (Node node : nodesList) {
+            Position position = node.getPosition();  
+            pathGraph.addNode(position);
         }
-        return allPaths;
+
+        HashSet<Node> connected = new HashSet<>();
+        for (Node node : pathGraph.getNodesList().values()) {
+            for (Position nextPosition : node.getPosition().nextPositions().values()) {
+                Node nextNode = pathGraph.getNode(nextPosition);
+                if (!connected.contains(nextNode) && nextNode != null) {
+                    node.addNeighbor(nextNode);
+                    connected.add(nextNode);
+                }
+            }
+        }
+        return pathGraph;
     }
+  
 }
 
 class Graph {
     final static int X = 30, Y = 20;
-    private HashMap<Position, Node> nodesList;
+    private LinkedHashMap<Position, Node> nodesList;
 
     Graph () {
-        nodesList = new HashMap<>();
+        nodesList = new LinkedHashMap<>();
     }
     
     // ------------------------ Getters & Setters 
@@ -283,7 +354,7 @@ class Graph {
         return nodesList.get(position);
     }
 
-    public HashMap<Position, Node> getNodesList () {
+    public LinkedHashMap<Position, Node> getNodesList () {
         return nodesList;
     }
 
@@ -322,6 +393,10 @@ class Node {
 
     }
 
+    Node (Node other) {
+        this.position = other.position;
+    }
+
     // ------------------------ Getters & Setters
     public Position getPosition() {
         return this.position;
@@ -329,6 +404,10 @@ class Node {
 
     public HashSet<Node> getNeighbors() {
         return this.neighbors;
+    }
+
+    public void addNeighbor(Node node) {
+        this.neighbors.add(node);
     }
 
     public int getDistance() {
@@ -347,13 +426,14 @@ class Node {
         }
     }
 
-    @Override
-    public String toString() {
-        return this.position.toString();
-    }
+    // @Override
+    // public String toString() {
+    //     return this.position.toString();
+    // }
 
-    public String neighborsToString () {
-        String str = " [ "; 
+    public String toString () {
+        String str = this.getPosition().toString();
+        str += " : [ "; 
 		for (Node neighbor : this.neighbors)
 			str += neighbor.getPosition().toString() + " ";
 		return str + "]\n";
@@ -421,7 +501,7 @@ class Position {
 
 class Player {
     // Robots and map attributs
-    static PlayerRobot player = null;
+    static Robot player = null;
     static HashMap<Integer, Robot> opponentsList = new HashMap<Integer, Robot>();
     static Grid map = new Grid();
 
@@ -429,41 +509,125 @@ class Player {
     public static Boolean isCorrectMove(Position position) {
         if (map.isWall(position)) return false;
         else if (map.isLine(position)) return false;
-        else return true;
+        else {
+            return true;
+        }
     }
 
-    public static String moveToMake(PlayerRobot player, HashMap<Integer, Robot> opponentsList, Grid map) {
-        String[] moves = {"UP", "RIGHT", "DOWN", "LEFT"};
-        String moveToMake = "";
-        Position curPos = player.getPosition();
-        Position nextPos = new Position(-1,-1);
+    public static Position getNearestWall(Robot player) {
+        Position destination = null;
+        Position start = player.getPosition(); 
 
-        int i = 0;
-        while (!isCorrectMove(nextPos)) {
-            switch(moves[i]) {
-                case "UP":
-                    nextPos.setPosition(curPos.nextPositions().get("up"));
-                    break;
-                case "DOWN":
-                    nextPos.setPosition(curPos.nextPositions().get("down"));
-                    break;
-                case "LEFT":
-                    nextPos.setPosition(curPos.nextPositions().get("left"));
-                    break;
-                case "RIGHT":
-                    nextPos.setPosition(curPos.nextPositions().get("right"));
-                    break;
-                default:
-                    nextPos.setPosition(curPos.nextPositions().get("up"));
-                    moveToMake = "UP";
-            }
-            moveToMake = moves[i];
-            i = (i >= moves.length - 1) ? 0 : i+1 ;
+        int lessX = -1;
+        int distanceX = 100;
+        int[] rows = {player.getDistanceFromX(0), player.getDistanceFromX(29)};
+        if (rows[0] < rows[1] && isCorrectMove(new Position(rows[0], start.getY()))) {
+            distanceX = rows[0];
+            lessX = 0;
+        } else if (rows[0] > rows[1] && isCorrectMove(new Position(rows[1], start.getY()))) {
+            distanceX = rows[1];
+            lessX = 29;
         }
 
-        System.err.println("curPosition : " + "[" + curPos.getX() + "," + curPos.getY() + "]");
-        System.err.println("nextPosition : " + "[" + nextPos.getX() + "," + nextPos.getY() + "]");
-        return moveToMake;
+        int lessY = -1;           
+        int distanceY = 100;
+        int [] cols = {player.getDistanceFromY(0), player.getDistanceFromY(19)};
+        if (cols[0] < cols[1] && isCorrectMove(new Position(start.getY(), cols[0]))) {
+            distanceY = cols[0];
+            lessY = 0;
+        } else if (cols[0] > cols[1] && isCorrectMove(new Position(start.getY(), cols[1]))) {
+            distanceY = cols[1];
+            lessY = 19;
+        }
+
+
+        if (distanceX < distanceY) {
+            destination = new Position(lessX, start.getY());
+        } else if (distanceX > distanceY) {
+            destination = new Position(start.getX(), lessY);
+        }
+
+        if (destination != null && destination.equals(start)) destination = null;
+        return destination; 
+    }
+
+    public static Position getNearestCorner(Robot player) {
+        Position destination = null;
+        Position start = player.getPosition(); 
+
+        if (start.getX() == 0 || start.getX() == 29) {
+            int lessY = -1;
+            int distanceX = -1;
+            int[] rows = {player.getDistanceFromY(0), player.getDistanceFromY(19)};
+
+            if (rows[0] < rows[1] && isCorrectMove(new Position(rows[0], start.getY()))) {
+                distanceX = rows[0];
+                lessY = 0;
+            } else if (rows[0] > rows[1] && isCorrectMove(new Position(rows[1], start.getY()))) {
+                distanceX = rows[1];
+                lessY = 19;
+            }
+
+            if (distanceX >= 0) destination = new Position(start.getX(), lessY);
+        } 
+        else if (start.getY() == 0 || start.getY() == 19) {
+            int [] cols = {player.getDistanceFromX(0), player.getDistanceFromX(29)};
+            int lessX = -1;
+            int distanceY = -1;
+     
+            if (cols[0] < cols[1] && isCorrectMove(new Position(start.getY(), cols[0]))) {
+                distanceY = cols[0];
+                lessX = 0;
+            } else if (cols[0] > cols[1] && isCorrectMove(new Position(start.getY(), cols[1]))) {
+                distanceY = cols[1];
+                lessX = 29;
+            }
+
+            if (distanceY >= 0) destination = new Position(lessX, start.getY());
+        }
+
+        System.err.println("Corner destination : " + destination);
+        if (destination != null && (destination.equals(start) || !isCorrectMove(destination))) destination = null;
+        System.err.println("Corner destination after check: " + destination);
+        return destination; 
+    }
+    
+    public static String moveToMake(Robot player, HashMap<Integer, Robot> opponentsList, Grid map) {
+        Position start = player.getPosition();
+        Position destination = null;    
+
+        if (start.getX() == 0 || start.getX() == 29 || start.getY() == 0 || start.getY() == 19 ) {
+            destination = getNearestCorner(player);
+            if (destination == null) {
+                destination = getNearestWall(player);
+            }
+        } else {
+            destination = getNearestWall(player);
+        }
+
+        if (destination == null) {
+            String[] directions = { "UP", "DOWN" , "LEFT", "RIGHT"};
+            destination = new Position(-1,-1);
+            int j = 0;
+            while (!isCorrectMove(destination) && j < directions.length) {
+                destination = start.nextPositions().get(directions[j].toLowerCase()); 
+                j++;
+            } 
+        }
+       
+        String nextDirection;
+        PathFinder pathFinder = new PathFinder(start, map);
+       
+        System.err.println("Destination : " + destination);
+        nextDirection = pathFinder.findShortestPath(destination);
+        return nextDirection;
+    }
+
+    public static void printPositionsInGame(Robot player, HashMap<Integer, Robot> opponents) {
+        System.err.println("Player : " + player.getPosition());
+        for (Integer opponent : opponents.keySet()) {
+            System.err.println("Opponent " + opponent + " : " + opponents.get(opponent).getPosition());
+        }
     }
     
     public static void main(String args[]) {
@@ -502,15 +666,8 @@ class Player {
             }
 
             // DEBUG
-            // System.err.println("Player : \n" + player);
-            // System.err.println("Opponent : \n" + opponentsList);
+            printPositionsInGame(player, opponentsList);
 
-            Position start = new Position(0,0);
-            Position end = new Position(3,3);
-            PathFinder pathFinder = new PathFinder();
-
-            LinkedList<Node> allPaths = pathFinder.findAllPaths(start, end);
-            for (Node node : allPaths) System.err.println(node);         
 
             // ACTION
             String move = moveToMake(player, opponentsList, map);
