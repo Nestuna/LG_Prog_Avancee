@@ -1,7 +1,5 @@
 import java.util.*;
 
-import javax.sound.midi.SysexMessage;
-
 /**
  * Auto-generated code below aims at helping you parse
  * the standard input according to the problem statement.
@@ -521,10 +519,10 @@ class Player {
         int lessX = -1;
         int distanceX = 100;
         int[] rows = {player.getDistanceFromX(0), player.getDistanceFromX(29)};
-        if (rows[0] < rows[1] && isCorrectMove(new Position(rows[0], start.getY()))) {
+        if (rows[0] < rows[1] && isCorrectMove(new Position(0, start.getY()))) {
             distanceX = rows[0];
             lessX = 0;
-        } else if (rows[0] > rows[1] && isCorrectMove(new Position(rows[1], start.getY()))) {
+        } else if (rows[0] > rows[1] && isCorrectMove(new Position(29, start.getY()))) {
             distanceX = rows[1];
             lessX = 29;
         }
@@ -532,10 +530,10 @@ class Player {
         int lessY = -1;           
         int distanceY = 100;
         int [] cols = {player.getDistanceFromY(0), player.getDistanceFromY(19)};
-        if (cols[0] < cols[1] && isCorrectMove(new Position(start.getY(), cols[0]))) {
+        if (cols[0] < cols[1] && isCorrectMove(new Position(start.getY(), 0))) {
             distanceY = cols[0];
             lessY = 0;
-        } else if (cols[0] > cols[1] && isCorrectMove(new Position(start.getY(), cols[1]))) {
+        } else if (cols[0] > cols[1] && isCorrectMove(new Position(start.getY(), 19))) {
             distanceY = cols[1];
             lessY = 19;
         }
@@ -553,43 +551,54 @@ class Player {
 
     public static Position getNearestCorner(Robot player) {
         Position destination = null;
-        Position start = player.getPosition(); 
+        Position start = player.getPosition();
 
         if (start.getX() == 0 || start.getX() == 29) {
             int lessY = -1;
-            int distanceX = -1;
             int[] rows = {player.getDistanceFromY(0), player.getDistanceFromY(19)};
 
-            if (rows[0] < rows[1] && isCorrectMove(new Position(rows[0], start.getY()))) {
-                distanceX = rows[0];
-                lessY = 0;
-            } else if (rows[0] > rows[1] && isCorrectMove(new Position(rows[1], start.getY()))) {
-                distanceX = rows[1];
-                lessY = 19;
+            if (rows[0] < rows[1]) {
+                if(isCorrectMove(new Position(0, start.getY()))) {
+                    lessY = 0;
+                } else if (isCorrectMove(new Position(19, start.getY()))) {
+                    lessY = 19;
+                }
+            } else if (rows[0] > rows[1]) {
+                if (isCorrectMove(new Position(19, start.getY()))) {
+                    lessY = 19;
+                } else if (isCorrectMove(new Position(rows[0], start.getY()))) {
+                    lessY = 0;
+                }
             }
 
-            if (distanceX >= 0) destination = new Position(start.getX(), lessY);
-        } 
+            destination = new Position(start.getX(), lessY);
+        }
         else if (start.getY() == 0 || start.getY() == 19) {
             int [] cols = {player.getDistanceFromX(0), player.getDistanceFromX(29)};
             int lessX = -1;
-            int distanceY = -1;
-     
-            if (cols[0] < cols[1] && isCorrectMove(new Position(start.getY(), cols[0]))) {
-                distanceY = cols[0];
-                lessX = 0;
-            } else if (cols[0] > cols[1] && isCorrectMove(new Position(start.getY(), cols[1]))) {
-                distanceY = cols[1];
-                lessX = 29;
+
+            if (cols[0] < cols[1]) {
+                if (isCorrectMove(new Position(0 ,start.getY()))) {
+                    lessX = 0;
+                } else if (isCorrectMove(new Position(29, start.getY()))) {
+                    lessX = 29;
+                }
+            } else if (cols[0] > cols[1]) {
+                if (isCorrectMove(new Position(29, start.getY()))) {
+                    lessX = 29;
+                } else if (isCorrectMove(new Position(0 ,start.getY()))) {
+                    lessX = 0;
+                }
             }
 
-            if (distanceY >= 0) destination = new Position(lessX, start.getY());
+            destination = new Position(lessX, start.getY());
         }
-
+        System.err.println("Nearest corner: " + destination);
         if (destination != null && (destination.equals(start) || !isCorrectMove(destination))) destination = null;
-        return destination; 
+        System.err.println("Nearest corner after check: " + destination);
+        return destination;
     }
-    
+
     public static String moveToMake(Robot player, HashMap<Integer, Robot> opponentsList, Grid map) {
         Position start = player.getPosition();
         Position destination = null;    
@@ -604,20 +613,27 @@ class Player {
         }
 
         if (destination == null) {
-            String[] directions = { "UP", "DOWN" , "LEFT", "RIGHT"};
+            List<String> directions;
+            if (start.getX() == 0 || start.getX() == 29) {
+                directions = Arrays.asList("UP" , "DOWN");
+            } else if (start.getX() == 0 || start.getX() == 29) {
+                directions = Arrays.asList("LEFT", "RIGHT");
+            } else {
+                directions = Arrays.asList( "UP", "DOWN" , "LEFT", "RIGHT");
+                System.err.println("Random mode");
+            }
             destination = new Position(-1,-1);
             int j = 0;
-            while (!isCorrectMove(destination) && j < directions.length) {
-                destination = start.nextPositions().get(directions[j].toLowerCase()); 
+            while (!isCorrectMove(destination) && j < directions.size()) {
+                destination = start.nextPositions().get(directions.get(j).toLowerCase());
                 j++;
-            } 
+            }
         }
-       
-        String nextDirection;
-        PathFinder pathFinder = new PathFinder(start, map);
-       
+
         System.err.println("Destination : " + destination);
-        nextDirection = pathFinder.findShortestPath(destination);
+
+        PathFinder pathFinder = new PathFinder(start, map);
+        String nextDirection = pathFinder.findShortestPath(destination);
         return nextDirection;
     }
 
